@@ -1,0 +1,16 @@
+This directory contains a few sample scripts that use MARC::XML. 
+
+- simple.pl : reads the t/marc.dat USMARC file and converts it 
+  into an XML file called output.xml
+
+- marc2xml.pl : is a script you can run from the command line to 
+  convert USMARC records to XML. 
+
+  usage: 
+  marc2xml.pl inputfile outputfile
+
+- xml2marc.pl : another script that you can run from the command
+  line to convert a properly formatted XML document to USMARC.
+
+  usage:
+  xml2marc.pl inputfile outputfile

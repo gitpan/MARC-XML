@@ -1,0 +1,19 @@
+Revision history for Perl extension MARC::XML.
+
+0.1   Sun Nov 14 21:59:00 EST 1999 <Summers>
+        - created MARC::XML subclass to handle MARC<->XML conversions
+        - moved _marc2xml() from MARC.pm into MARC::XML
+
+0.2   Sun Nov 21 18:49:00 EST 1999 <Summers>
+        - removed MARC::XML specific pod from MARC.pm and added to MARC::XML
+
+0.25  Tue Nov 23 11:32:16 CST 1999 <Birthisel>
+	- original CPAN-style version; created by h2xs 1.18
+	- linux command: h2xs -A -X -n MARC::XML
+	- added Makefile.PL, MANIFEST, README, etc.
+	- ported t directory and tests from MARC.pm, added test4.t
+	- surgery--XML::Parser wants global subs and other scope changes.
+	- cleanup inheritance details
+	- add "ordered" option to new()
+	- numerous documentation changes
+
