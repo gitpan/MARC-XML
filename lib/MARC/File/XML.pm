@@ -1,14 +1,19 @@
 package MARC::File::XML;
 
+use warnings;
 use strict;
 use base qw( MARC::File );
 use MARC::Record;
+use MARC::Field;
 use MARC::File::SAX;
+use IO::File;
+use Carp qw( croak );
 
-our $VERSION = '0.53';
+our $VERSION = '0.6';
 
 my $handler = MARC::File::SAX->new();
 my $parser = XML::SAX::ParserFactory->parser( Handler => $handler );
+
 
 =head1 NAME
 
@@ -16,11 +21,31 @@ MARC::File::XML - Work with MARC data encoded as XML
 
 =head1 SYNOPSIS
 
+    ## reading with MARC::Batch
     my $batch = MARC::Batch->new( 'XML', $filename );
     my $record = $batch->next();
 
-    my $file = MARC::File::XML::in( $filename );
+    ## or reading with MARC::File::XML explicitly
+    my $file = MARC::File::XML->in( $filename );
     my $record = $file->next();
+
+    ## serialize a single MARC::Record object as XML
+    print $record->as_xml();
+
+    ## write a bunch of records to a file
+    my $file = MARC::File::XML->out( 'myfile.xml' );
+    $file->write( $record1 );
+    $file->write( $record2 );
+    $file->write( $record3 );
+    $file->close();
+
+    ## instead of writing to disk, get the xml directly 
+    my $xml = join( "\n", 
+        MARC::File::XML::header(),
+        MARC::File::XML::record( $record1 ),
+        MARC::File::XML::record( $record2 ),
+        MARC::File::XML::footer()
+    );
 
 =head1 DESCRIPTION
 
@@ -44,7 +69,206 @@ at L<http://perl4lib.perl.org>.
 
 =head1 METHODS
 
+When you use MARC::File::XML your MARC::Record objects will have two new
+additional methods available to them: 
+
+=head2 as_xml()
+
+Returns a MARC::Record object serialized in XML.
+
+    print $record->as_xml();
+
+=cut 
+
+sub MARC::Record::as_xml {
+    my $record = shift;
+    return(  MARC::File::XML::encode( $record ) );
+}
+
+=head2 new_from_xml()
+
+If you have a chunk of XML and you want a record object for it you can use 
+this method to generate a MARC::Record object.
+
+    my $record = MARC::Record->new_from_xml( $xml );
+
+Note: only works for single record XML chunks.
+
+=cut 
+
+sub MARC::Record::new_from_xml {
+    my $xml = shift;
+    ## to allow calling as MARC::Record::new_from_xml()
+    ## or MARC::Record->new_from_xml()
+    $xml = shift if ( ref($xml) || ($xml eq "MARC::Record") );
+    return( MARC::File::XML::decode( $xml ) );
+}
+
+=pod 
+
+If you want to write records as XML to a file you can use out() with write()
+to serialize more than one record as XML.
+
+=head2 out()
+
+A constructor for creating a MARC::File::XML object that can write XML to a
+file. You must pass in the name of a file to write XML to.
+
+    my $file = MARC::XML::File->out( $filename );
+
 =cut
+
+sub out {
+    my ( $class, $filename ) = @_;
+    my $fh = IO::File->new( ">$filename" ) or croak( $! );
+    my %self = ( 
+        filename    => $filename,
+        fh          => $fh, 
+        header      => 0
+    );
+    return( bless \%self, ref( $class ) || $class );
+}
+
+=head2 write()
+
+Used in tandem with out() to write records to a file. 
+
+    my $file = MARC::File::XML->out( $filename );
+    $file->write( $record1 );
+    $file->write( $record2 );
+
+=cut
+
+sub write {
+    my ( $self, $record ) = @_;
+    if ( ! $self->{ fh } ) { 
+        croak( "MARC::File::XML object not open for writing" );
+    }
+    if ( ! $record ) { 
+        croak( "must pass write() a MARC::Record object" );
+    }
+    ## print the XML header if we haven't already
+    if ( ! $self->{ header } ) { 
+        $self->{ fh }->print( header() );
+        $self->{ header } = 1;
+    } 
+    ## print out the record
+    $self->{ fh }->print( record( $record ) ) || croak( $! );
+    return( 1 );
+}
+
+=head2 close()
+
+When writing records to disk the filehandle is automatically closed when you
+the MARC::File::XML object goes out of scope. If you want to close it explicitly
+use the close() method.
+
+=cut
+
+sub close {
+    return( 1 );
+    my $self = shift;
+    if ( $self->{ fh } ) {
+        $self->{ fh }->print( footer() ) if $self->{ header };
+        $self->{ fh } = undef;
+        $self->{ filename } = undef;
+        $self->{ header } = undef;
+    }
+    return( 1 );
+}
+
+## makes sure that the XML file is closed off
+
+sub DESTROY {
+    shift->close();
+}
+
+=pod
+
+If you want to generate batches of records as XML, but don't want to write to
+disk you'll have to use header(), record() and footer() to generate the
+different portions.  
+
+    $xml = join( "\n",
+        MARC::File::XML::header(),
+        MARC::File::XML::record( $record1 ),
+        MARC::File::XML::record( $record2 ),
+        MARC::File::XML::record( $record3 ),
+        MARC::File::XML::footer()
+    );
+
+=head2 header() 
+
+Returns a string of XML to use as the header to your XML file.
+
+=cut 
+
+sub header {
+    return( <<MARC_XML_HEADER );
+<?xml version="1.0" encoding="UTF-8"?>
+<collection xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.loc.gov/MARC21/slim http://www.loc.gov/standards/marcxml/schema/MARC21slim.xsd" xmlns="http://www.loc.gov/MARC21/slim">
+MARC_XML_HEADER
+}
+
+=head2 footer()
+
+Returns a string of XML to use at the end of your XML file.
+
+=cut
+
+sub footer {
+    return( "</collection>" );
+}
+
+=head2 record()
+
+Returns a chunk of XML suitable for placement between the header and the footer.
+
+=cut
+
+sub record {
+    my $record = shift;
+    my @xml = ();
+    push( @xml, "<record>" );
+    push( @xml, "  <leader>" . escape($record->leader()) . "</leader>" );
+    foreach my $field ( $record->fields() ) {
+        my $tag = $field->tag();
+        if ( $field->is_control_tag() ) { 
+            my $data = $field->data();
+            push( @xml, qq(  <controlfield tag="$tag">) .
+                escape($data). qq(</controlfield>) );
+        } else {
+            my $i1 = $field->indicator( 1 );
+            my $i2 = $field->indicator( 2 );
+            push( @xml, qq(  <datafield tag="$tag" ind1="$i1" ind2="$i2">) );
+            foreach my $subfield ( $field->subfields() ) { 
+                my ( $code, $data ) = @$subfield;
+                push( @xml, qq(    <subfield code="$code">).
+                    escape($data).qq(</subfield>) );
+            }
+            push( @xml, "  </datafield>" );
+        }
+    }
+    push( @xml, "</record>\n" );
+    return( join( "\n", @xml ) );
+}
+
+my %ESCAPES = (
+    '&'     => '&amp;',
+    '<'     => '&lt;',
+    '>'     => '&gt;',
+);
+my $ESCAPE_REGEX = 
+    eval 'qr/' . 
+    join( '|', map { $_ = "\Q$_\E" } keys %ESCAPES ) .
+    '/;'
+    ;
+
+sub escape {
+    my $string = shift;
+    $string =~ s/($ESCAPE_REGEX)/$ESCAPES{$1}/oge;
+    return( $string );
+}
 
 sub _next {
     my $self = shift;
@@ -70,8 +294,7 @@ sub _next {
 =head2 decode()
 
 You probably don't ever want to call this method directly. If you do 
-you should pass in a MARC::Record as the first argument, and a chunk of XML 
-text as the second.
+you should pass in a chunk of XML as the argument. 
 
 It is normally invoked by a call to next(), see L<MARC::Batch> or L<MARC::File>.
 
@@ -102,16 +325,27 @@ sub decode {
     
 }
 
+=head2 encode()
+
+You probably want to use the as_marc() method on your MARC::Record object
+instead of calling this directly. But if you want to you just need to 
+pass in the MARC::Record object you wish to encode as XML, and you will be
+returned the XML as a scalar.
+
+=cut
+
 sub encode {
-    # not implemented yet
-    # interested? let me know ehs@pobox.com
+    my $record = shift;
+    my @xml = ();
+    push( @xml, header() );
+    push( @xml, record( $record ) );
+    push( @xml, footer() );
+    return( join( "\n", @xml ) );
 }
 
 =head1 TODO
 
 =over 4
-
-=item * Implement MARC::File::XML::encode() for encoding as XML.
 
 =item * Support for character translation using MARC::Charset.
 
