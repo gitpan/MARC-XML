@@ -9,7 +9,7 @@ use MARC::File::SAX;
 use IO::File;
 use Carp qw( croak );
 
-our $VERSION = '0.6';
+our $VERSION = '0.61';
 
 my $handler = MARC::File::SAX->new();
 my $parser = XML::SAX::ParserFactory->parser( Handler => $handler );
@@ -233,7 +233,7 @@ sub record {
     push( @xml, "  <leader>" . escape($record->leader()) . "</leader>" );
     foreach my $field ( $record->fields() ) {
         my $tag = $field->tag();
-        if ( $field->is_control_tag() ) { 
+        if ( $field->is_control_field() ) { 
             my $data = $field->data();
             push( @xml, qq(  <controlfield tag="$tag">) .
                 escape($data). qq(</controlfield>) );
