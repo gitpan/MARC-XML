@@ -11,7 +11,7 @@ use lib './blib/lib','../blib/lib','./lib','../lib','..';
 
 BEGIN { $| = 1; print "1..178\n"; }
 END {print "not ok 1\n" unless $loaded;}
-use MARC::XML 0.3;
+use MARC::XML 0.4;
 $loaded = 1;
 print "ok 1\n";
 
@@ -89,6 +89,8 @@ unless (is_ok ($x = MARC::XML->new ($file,"USMARC"))) {		# 2
     exit 1;
     # next test would die at runtime without $x
 }
+
+$MARC::TEST = 1;	# for "constant" date stamp
 
 is_ok (2 == $x->marc_count);					# 3
 

@@ -32,3 +32,9 @@ Revision history for Perl extension MARC::XML.
 	- rename $XDEBUG, add $XTEST and xcarp()
 	- add "wrapper" methods output_header, output_body, output_footer
 
+0.4   Sun Apr 23 20:50:47 CDT 2000 <Birthisel>
+	- Update "Windows" test in Makefile.PL
+	- Needs MARC 1.07 to cover recent fixes and incompatibilities
+	- Perl 5.6.0 warns on "join (//,", change to "join (''," instead.
+	- add $MARC::TEST to t/test?.t
+	- various documentation fixes

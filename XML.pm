@@ -7,10 +7,10 @@ use vars qw($VERSION @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS $XDEBUG $XTEST);
 
 require 5.004;
 require Exporter;
-use MARC 1.04;
+use MARC 1.07;
 use XML::Parser 2.27; 
 
-$VERSION = 0.3;
+$VERSION = 0.4;
 $XDEBUG = 0;
 $XTEST = 0;
 @ISA = qw(Exporter MARC);
@@ -477,7 +477,7 @@ sub _char2xml {
     my $charmap = shift;
     local $^W = 0;	# no warnings
 	# the simple case only works for single byte entities
-    my $xml_string = join (//, map { ${$charmap}{$_} } @marc_string);
+    my $xml_string = join ('', map { ${$charmap}{$_} } @marc_string);
     return $xml_string;
 }
 
@@ -857,6 +857,18 @@ So you could read in an XML file and then output it as ascii text:
    $x = MARC::XML->new("myxmlfile.xml","xml");
    $x->output({file=>">mytextfile.txt","ascii");
 
+=head1 NOTES
+
+Please let us know if you run into any difficulties using MARC.pm--we'd be
+happy to try to help. Also, please contact us if you notice any bugs, or
+if you would like to suggest an improvement/enhancement. Email addresses 
+are listed at the bottom of this page.
+
+Development of MARC.pm and other library oriented Perl utilities is conducted
+on the Perl4Lib listserv. Perl4Lib is an open list and is an ideal place to
+ask questions about MARC.pm. Subscription information is available at
+http://www.vims.edu/perl4lib
+
 Two global boolean variables are reserved for test and debugging. Both are
 "0" (off) by default. The C<$XTEST> variable disables internal error messages
 generated using I<Carp>. It should only be used in the automatic test suite.
@@ -876,7 +888,7 @@ Derek Lane dereklane@pobox.com
 
 Charles McFadden chuck@vims.edu
 
-Ed Summers esummers@odu.edu
+Ed Summers ed@cheetahmail.com
 
 =head1 SEE ALSO
 
@@ -884,9 +896,9 @@ perl(1), MARC.pm, MARC http://lcweb.loc.gov/marc , XML http://www.w3.org/xml .
 
 =head1 COPYRIGHT
 
-Copyright (C) 2000, Bearden, Birthisel, Lane, McFadden, and Summers.
+Copyright (C) 1999,2000, Bearden, Birthisel, Lane, McFadden, and Summers.
 All rights reserved. This module is free software; you can redistribute
-it and/or modify it under the same terms as Perl itself. 18 January 2000
-Portions Copyright (C) 1999, Duke University, Lane.
+it and/or modify it under the same terms as Perl itself. 23 April 2000.
+Portions Copyright (C) 1999,2000, Duke University, Lane.
 
 =cut

@@ -11,7 +11,7 @@ use lib './blib/lib','../blib/lib','./lib','../lib','..';
 
 BEGIN { $| = 1; print "1..81\n"; }
 END {print "not ok 1\n" unless $loaded;}
-use MARC::XML 0.3;
+use MARC::XML 0.4;
 $loaded = 1;
 print "ok 1\n";
 
@@ -86,6 +86,8 @@ if (@ARGV) {
     }
 }
 
+$MARC::TEST = 1;	# for "constant" date stamp
+
 my $x;
 unlink 'output.txt', 'output.html', 'output3.xml', 'output.isbd',
        'output.urls', 'output2.bkr', 'output.mkr', 'output.bkr';
@@ -126,7 +128,7 @@ $^W = 0;
 is_ok ($x->output({file=>">output3.xml",'format'=>"xml"}));	# 11 
 my $head1 = '<?xml version="1.0" encoding="US-ASCII" standalone="%s"?>'."\n";
 my $head2 = "<!DOCTYPE marc SYSTEM \"$file4\">\n";
-my $head3 = '<field type="000">01201nam  2200253 a 4500</field>'."\n";
+my $head3 = '<field type="000">01200nam  2200253 a 4500</field>'."\n";
 
 is_ok(open CF, "output3.xml");					# 12
 my @xml_file = <CF>;
@@ -184,7 +186,7 @@ undef $z;
 
 my ($m000) = $x->getvalue({record=>'1',field=>'000'});
 my ($m001) = $x->getvalue({record=>'1',field=>'001'});
-is_ok ($m000 eq "01201nam  2200253 a 4500");			# 38
+is_ok ($m000 eq "01200nam  2200253 a 4500");			# 38
 is_ok ($m001 eq "tes96000001 ");				# 39
 
 my ($m002) = $x->getvalue({record=>'1',field=>'002'});
@@ -195,7 +197,7 @@ is_ok ($m003 eq "ViArRB");					# 41
 my ($m004) = $x->getvalue({record=>'1',field=>'004'});
 my ($m005) = $x->getvalue({record=>'1',field=>'005'});
 is_bad (defined $m004);						# 42
-is_ok ($m005 eq "199602210153555.7");				# 43
+is_ok ($m005 eq "19960221075055.7");				# 43
 
 if ($naptime) {
     print "++++ page break\n";

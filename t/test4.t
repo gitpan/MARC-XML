@@ -11,7 +11,7 @@ use lib './blib/lib','../blib/lib','./lib','../lib','..';
 
 BEGIN { $| = 1; print "1..186\n"; }
 END {print "not ok 1\n" unless $loaded;}
-use MARC::XML 0.3;
+use MARC::XML 0.4;
 $loaded = 1;
 print "ok 1\n";
 
@@ -76,6 +76,8 @@ if (@ARGV) {
 	die "Usage: perl test?.t [ page_delay (0..5) ]";
     }
 }
+
+$MARC::TEST = 1;	# for "constant" date stamp
 
 my $x;
 unlink 'output.txt', 'output.html', 'output.isbd', 'output2.xml',
@@ -164,7 +166,7 @@ my ($m008) = $x->getvalue({field=>'008',record=>1});
 is_ok($m000 eq "00901cam  2200241Ia 45e0");			# 30
 is_ok($m001 eq "ocm01047729 ");					# 31
 is_ok($m003 eq "OCoLC");					# 32
-is_ok($m005 eq "19990808143752.0");				# 33
+is_ok($m005 eq "19960221075055.7");				# 33
 is_ok($m008 eq "741021s1884    enkaf         000 1 eng d");	# 34
 
 is_ok($x->_pack_ldr($rhldr) eq $m000);				# 35

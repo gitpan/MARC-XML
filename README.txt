@@ -1,5 +1,5 @@
 MARC::XML (XML extensions for MAchine Readable Cataloging)
-VERSION=0.3, 25 January 2000
+VERSION=0.4, 23 April 2000
 
 This is a cross-platform module. All of the files except README.txt
 are LF-only terminations. You will need a better editor than Notepad
@@ -11,7 +11,7 @@ MARC.pm is a Perl 5 module for reading in, manipulating, and outputting
 bibliographic records in the USMARC format. You will need to have Perl
 5.004 or greater for MARC.pm to work properly. MARC::XML adds support
 for converting to and from XML format files. You will need to have both
-the MARC [1.04] and XML::Parser [2.27] modules installed (both available
+the MARC [1.07] and XML::Parser [2.27] modules installed (both available
 from CPAN. XML::Parser is included in Win32 Perl versions 5.005 and above -
 it is required by PPM. It may not be available for 5.004 and earlier
 on Win32.).
@@ -115,12 +115,12 @@ AUTHORS:
     Chuck Bearden cbearden@rice.edu
     Bill Birthisel wcbirthisel@alum.mit.edu
     Charles McFadden chuck@vims.edu
-    Ed Summers esummers@odu.edu
     Derek Lane dereklane@pobox.com
+    Ed Summers ed@cheetahmail.com
 
 COPYRIGHT
 
-Copyright (C) 2000, Bearden, Birthisel, Lane, McFadden, and Summers.
+Copyright (C) 1999,2000, Bearden, Birthisel, Lane, McFadden, and Summers.
 All rights reserved. This module is free software; you can redistribute
-it and/or modify it under the same terms as Perl itself.
-Portions Copyright (C) 1999, Duke University, Lane.
+it and/or modify it under the same terms as Perl itself. 23 April 2000.
+Portions Copyright (C) 1999,2000, Duke University, Lane.

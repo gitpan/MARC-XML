@@ -4,7 +4,7 @@ use ExtUtils::MakeMaker;
 
 require 5.004;
 
-unless ($^O eq "MSWin32") {
+unless ($^O =~ /Win/i) {
     WriteMakefile(
         'NAME'	=> 'MARC::XML',
         'VERSION_FROM' => 'XML.pm', # finds $VERSION
