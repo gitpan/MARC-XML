@@ -11,7 +11,7 @@ use lib './blib/lib','../blib/lib','./lib','../lib','..';
 
 BEGIN { $| = 1; print "1..79\n"; }
 END {print "not ok 1\n" unless $loaded;}
-use MARCopt 0.25;		# check inheritance & export
+use MARCopt 0.3;		# check inheritance & export
 $loaded = 1;
 print "ok 1\n";
 
@@ -140,7 +140,7 @@ is_ok ($y1 eq $yy);						# 23
 my $rhldr = $x->unpack_ldr(1);
 is_ok('c' eq ${$rhldr}{RecStat});				# 24
 is_ok('a' eq ${$rhldr}{Type});					# 25
-is_ok('m' eq ${$rhldr}{BibLvl});				# 26
+is_ok('m' eq ${$rhldr}{BLvl});					# 26
 
 my $rhff  = $x->unpack_008(1);
 is_ok('741021' eq ${$rhff}{Entered});				# 27

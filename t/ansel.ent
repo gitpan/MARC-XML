@@ -1,0 +1,151 @@
+<!-- ============================================================= -->
+<!--            MARC::XML 0.3 Entity declarations                  -->
+<!-- Entities that are decoded by the internal character mapping   -->
+<!-- of MARC::XML (either default or passed-in) are declared as    -->
+<!-- "SYSTEM" Entities. Character constants, if defined, are input -->
+<!-- as UTF-8 and not seen by the internal character mapping.      -->
+<!--                                                               -->
+<!--     based on definitions contained in:                        -->
+<!-- MODULE:    Upper-register Character to Entity Specification   -->
+<!-- VERSION:   1.0                                                -->
+<!-- DATE:      October 20, 1997                                   -->
+<!-- CREATED FOR:                                                  -->
+<!--            MARC Standards Office                              -->
+<!-- ============================================================= -->
+<!ENTITY lt     "&#38;#60;"> 
+<!ENTITY gt     "&#62;"> 
+<!ENTITY amp    "&#38;#38;"> 
+<!ENTITY apos   "&#39;"> 
+<!ENTITY quot   "&#34;"> 
+<!ENTITY x80 SYSTEM 'x80'>
+<!ENTITY x81 SYSTEM 'x81'>
+<!ENTITY x82 SYSTEM 'x82'>
+<!ENTITY x83 SYSTEM 'x83'>
+<!ENTITY x84 SYSTEM 'x84'>
+<!ENTITY x85 SYSTEM 'x85'>
+<!ENTITY x86 SYSTEM 'x86'>
+<!ENTITY x87 SYSTEM 'x87'>
+<!ENTITY x88 SYSTEM 'x88'>
+<!ENTITY x89 SYSTEM 'x89'>
+<!ENTITY x8A SYSTEM 'x8A'>
+<!ENTITY x8B SYSTEM 'x8B'>
+<!ENTITY x8C SYSTEM 'x8C'>
+<!ENTITY x8D SYSTEM 'joiner'>
+<!ENTITY joiner SYSTEM 'joiner'>
+<!ENTITY x8E SYSTEM 'nonjoinr'>
+<!ENTITY nonjoinr SYSTEM 'nonjoinr'>
+<!ENTITY x8F SYSTEM 'x8F'>
+<!ENTITY x90 SYSTEM 'x90'>
+<!ENTITY x91 SYSTEM 'x91'>
+<!ENTITY x92 SYSTEM 'x92'>
+<!ENTITY x93 SYSTEM 'x93'>
+<!ENTITY x94 SYSTEM 'x94'>
+<!ENTITY x95 SYSTEM 'x95'>
+<!ENTITY x96 SYSTEM 'x96'>
+<!ENTITY x97 SYSTEM 'x97'>
+<!ENTITY x98 SYSTEM 'x98'>
+<!ENTITY x99 SYSTEM 'x99'>
+<!ENTITY x9A SYSTEM 'x9A'>
+<!ENTITY x9B SYSTEM 'x9B'>
+<!ENTITY x9C SYSTEM 'x9C'>
+<!ENTITY x9D SYSTEM 'x9D'>
+<!ENTITY x9E SYSTEM 'x9E'>
+<!ENTITY x9F SYSTEM 'x9F'>
+<!ENTITY xA0 SYSTEM 'xA0'>
+<!ENTITY Lstrok SYSTEM 'Lstrok'>
+<!ENTITY Ostrok SYSTEM 'Ostrok'>
+<!ENTITY Dstrok SYSTEM 'Dstrok'>
+<!ENTITY THORN SYSTEM 'THORN'>
+<!ENTITY AElig SYSTEM 'AElig'>
+<!ENTITY OElig SYSTEM 'OElig'>
+<!ENTITY softsign SYSTEM 'softsign'>
+<!ENTITY middot SYSTEM 'middot'>
+<!ENTITY flat SYSTEM 'flat'>
+<!ENTITY reg SYSTEM 'reg'>
+<!ENTITY plusmn SYSTEM 'plusmn'>
+<!ENTITY Ohorn SYSTEM 'Ohorn'>
+<!ENTITY Uhorn SYSTEM 'Uhorn'>
+<!ENTITY mlrhring SYSTEM 'mlrhring'>
+<!ENTITY xAF SYSTEM 'xAF'>
+<!ENTITY mllhring SYSTEM 'mllhring'>
+<!ENTITY lstrok SYSTEM 'lstrok'>
+<!ENTITY ostrok SYSTEM 'ostrok'>
+<!ENTITY dstrok SYSTEM 'dstrok'>
+<!ENTITY thorn SYSTEM 'thorn'>
+<!ENTITY aelig SYSTEM 'aelig'>
+<!ENTITY oelig SYSTEM 'oelig'>
+<!ENTITY hardsign SYSTEM 'hardsign'>
+<!ENTITY inodot SYSTEM 'inodot'>
+<!ENTITY pound SYSTEM 'pound'>
+<!ENTITY eth SYSTEM 'eth'>
+<!ENTITY xBB SYSTEM 'xBB'>
+<!ENTITY ohorn SYSTEM 'ohorn'>
+<!ENTITY uhorn SYSTEM 'uhorn'>
+<!ENTITY xBE SYSTEM 'xBE'>
+<!ENTITY xBF SYSTEM 'xBF'>
+<!ENTITY deg SYSTEM 'deg'>
+<!ENTITY scriptl SYSTEM 'scriptl'>
+<!ENTITY phono SYSTEM 'phono'>
+<!ENTITY copy SYSTEM 'copy'>
+<!ENTITY sharp SYSTEM 'sharp'>
+<!ENTITY iquest SYSTEM 'iquest'>
+<!ENTITY iexcl SYSTEM 'iexcl'>
+<!ENTITY xC7 SYSTEM 'xC7'>
+<!ENTITY xC8 SYSTEM 'xC8'>
+<!ENTITY xC9 SYSTEM 'xC9'>
+<!ENTITY xCA SYSTEM 'xCA'>
+<!ENTITY xCB SYSTEM 'xCB'>
+<!ENTITY xCC SYSTEM 'xCC'>
+<!ENTITY xCD SYSTEM 'xCD'>
+<!ENTITY xCE SYSTEM 'xCE'>
+<!ENTITY xCF SYSTEM 'xCF'>
+<!ENTITY xD0 SYSTEM 'xD0'>
+<!ENTITY xD1 SYSTEM 'xD1'>
+<!ENTITY xD2 SYSTEM 'xD2'>
+<!ENTITY xD3 SYSTEM 'xD3'>
+<!ENTITY xD4 SYSTEM 'xD4'>
+<!ENTITY xD5 SYSTEM 'xD5'>
+<!ENTITY xD6 SYSTEM 'xD6'>
+<!ENTITY xD7 SYSTEM 'xD7'>
+<!ENTITY xD8 SYSTEM 'xD8'>
+<!ENTITY xD9 SYSTEM 'xD9'>
+<!ENTITY xDA SYSTEM 'xDA'>
+<!ENTITY xDB SYSTEM 'xDB'>
+<!ENTITY xDC SYSTEM 'xDC'>
+<!ENTITY xDD SYSTEM 'xDD'>
+<!ENTITY xDE SYSTEM 'xDE'>
+<!ENTITY xDF SYSTEM 'xDF'>
+<!ENTITY hooka SYSTEM 'hooka'>
+<!ENTITY xE0 SYSTEM 'xE0'>
+<!ENTITY grave SYSTEM 'grave'>
+<!ENTITY acute SYSTEM 'acute'>
+<!ENTITY circ SYSTEM 'circ'>
+<!ENTITY tilde SYSTEM 'tilde'>
+<!ENTITY macr SYSTEM 'macr'>
+<!ENTITY breve SYSTEM 'breve'>
+<!ENTITY dot SYSTEM 'dot'>
+<!ENTITY uml SYSTEM 'uml'>
+<!ENTITY diaer SYSTEM 'diaer'>
+<!ENTITY caron SYSTEM 'caron'>
+<!ENTITY ring SYSTEM 'ring'>
+<!ENTITY llig SYSTEM 'llig'>
+<!ENTITY rlig SYSTEM 'rlig'>
+<!ENTITY rcommaa SYSTEM 'rcommaa'>
+<!ENTITY dblac SYSTEM 'dblac'>
+<!ENTITY candra SYSTEM 'candra'>
+<!ENTITY cedil SYSTEM 'cedil'>
+<!ENTITY ogon SYSTEM 'ogon'>
+<!ENTITY dotb SYSTEM 'dotb'>
+<!ENTITY dbldotb SYSTEM 'dbldotb'>
+<!ENTITY ringb SYSTEM 'ringb'>
+<!ENTITY dblunder SYSTEM 'dblunder'>
+<!ENTITY under SYSTEM 'under'>
+<!ENTITY commab SYSTEM 'commab'>
+<!ENTITY rcedil SYSTEM 'rcedil'>
+<!ENTITY breveb SYSTEM 'breveb'>
+<!ENTITY ldbltil SYSTEM 'ldbltil'>
+<!ENTITY rdbltil SYSTEM 'rdbltil'>
+<!ENTITY xFC SYSTEM 'FC'>
+<!ENTITY xFD SYSTEM 'FD'>
+<!ENTITY commaa SYSTEM 'commaa'>
+<!ENTITY xFF SYSTEM 'FF'>

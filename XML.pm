@@ -3,15 +3,16 @@ package MARC::XML;
 use Carp;
 use strict;
 
-use vars qw($VERSION @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS $DEBUG);
+use vars qw($VERSION @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS $XDEBUG $XTEST);
 
 require 5.004;
 require Exporter;
-use MARC 1.00;
-use XML::Parser; 
+use MARC 1.04;
+use XML::Parser 2.27; 
 
-$VERSION = 0.25;
-$DEBUG = 0;
+$VERSION = 0.3;
+$XDEBUG = 0;
+$XTEST = 0;
 @ISA = qw(Exporter MARC);
 @EXPORT= qw();
 @EXPORT_OK= qw();
@@ -22,8 +23,13 @@ $DEBUG = 0;
 #### Exporter::export_ok_tags('USTEXT');
 #### $EXPORT_TAGS{ALL} = \@EXPORT_OK;
 
+sub xcarp {
+    Carp::carp (@_) unless $XTEST;
+}
+
 ####################################################################
 # variables used in subroutines called by parser                   #
+# not currently per-object, so one XML conversion at a time        #
 ####################################################################
 
 my $count;
@@ -37,6 +43,14 @@ my $subfieldvalue;
 my $recordnum;
 my $marc_obj;
 my $reorder;
+my $enthash;	# ref to entity decoding hash
+
+####################################################################
+# templates used to output headers                                 #
+####################################################################
+
+my $head1 = '<?xml version="1.0" encoding="%s" standalone="%s"?>';
+my $head2 = '%s<!DOCTYPE marc SYSTEM "%s">';
 
 ####################################################################
 # handlers for the XML elements, the so called "subs style".       #
@@ -69,18 +83,13 @@ sub field_ {
 		});
 	}
 	else {
-	    my $subcommand;
-	    for (my $i=0; $i<$#subfields; $i=$i+2) {
-		$subcommand.="$subfields[$i]=>\"$subfields[$i+1]\",";
-	    }
-	    chop($subcommand);
 	    $marc_obj->addfield({
 		record=>$recordnum,
 		field=>$field,
 		ordered=>$reorder,
 		i1=>$i1,
 		i2=>$i2,
-		value=>[eval($subcommand)]
+		value=>[@subfields]
 		});
 	}
 	$field=undef;
@@ -104,10 +113,21 @@ sub subfield_ {
 
 sub handle_char {
 	(my $expat, my $string)=@_;
-	$string=~s/\'/\\\'/g;
-	$string=~s/\"/\\\"/g;
-	if ($field && not($subfield)) {$fieldvalue.=$string}
 	if ($subfield) {$subfieldvalue.=$string}
+	elsif ($field) {$fieldvalue.=$string}
+}
+
+sub handle_extent {
+    my ($p, $base, $sys, $pub) = @_;
+    print "handle_extent: $base, $sys, $pub\n" if ($XDEBUG);
+    if (exists $$enthash{$sys}) {
+	if ($subfield) {$subfieldvalue.=$$enthash{$sys}}
+	elsif ($field) {$fieldvalue.=$$enthash{$sys}}
+	return "";
+    }
+    local(*FOO);
+    open(FOO, $sys) or die "Couldn't open entity $sys";
+    return *FOO;
 }
 
 ####################################################################
@@ -127,13 +147,38 @@ sub new {
     if ($file and $format=~/xml$/oi) {
 	$marc = $class->SUPER::new();
 	$reorder = shift || "n";
-	$rcount = _readxml($marc,$file);
+        unless (-e $file) {xcarp "File $file doesn't exist"; return}
+	    #if the file doesn't exist return an error
+	$rcount = _readxml($marc, $file);
     }
     else {
 	$marc = $class->SUPER::new($file,$format);
     }
     bless($marc,$class);
     return $marc;
+}
+
+####################################################################
+# simple wrapper methods to simplify outputting                    #
+# just pass through all parameters except format                   #
+####################################################################
+
+sub output_header {
+    my ($marc,$params)=@_;
+    $params->{'format'} = "xml_header";
+    return output($marc,$params);
+}
+
+sub output_body {
+    my ($marc,$params)=@_;
+    $params->{'format'} = "xml_body";
+    return output($marc,$params);
+}
+
+sub output_footer {
+    my ($marc,$params)=@_;
+    $params->{'format'} = "xml_footer";
+    return output($marc,$params);
 }
 
 ####################################################################
@@ -149,18 +194,25 @@ sub output {
     (my $marc, my $params)=@_;
     my $file=$params->{file};
     my $newline = $params->{lineterm} || "\n";
+    my $basecode = $params->{encoding} || "US-ASCII";
+    my $dtd = $params->{dtd_file} || "";
+    my $stand = $params->{standalone} || $dtd ? "no" : "yes";
     my $output="";
     unless (exists $params->{'format'}) {
         $params->{'format'} = "xml";
         $params->{lineterm} = $newline;
     }
     if ($params->{'format'} =~ /xml$/oi) {
-        $output .="<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>$newline$newline<marc>$newline$newline";
+        $output = sprintf $head1, $basecode, $stand;
+        $output .= sprintf $head2, $newline, $dtd if ($dtd);
+        $output .= "$newline<marc>$newline$newline";
 	$output .= _marc2xml($marc,$params);
         $output .= "</marc>$newline";
     }
     elsif ($params->{'format'} =~ /xml_header$/oi) {
-        $output .="<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>$newline$newline<marc>$newline$newline";
+        $output = sprintf $head1, $basecode, $stand;
+        $output .= sprintf $head2, $newline, $dtd if ($dtd);
+        $output .= "$newline<marc>$newline$newline";
     }
     elsif ($params->{'format'} =~ /xml_body$/oi) {
 	$output=_marc2xml($marc,$params);
@@ -193,14 +245,187 @@ sub output {
 # work. If no records are read in an error will be generated.      #
 ####################################################################
 sub _readxml {
-    $marc_obj = shift;
+    $marc_obj = shift;	# must be package global
     my $file = shift;
+    unless ($enthash) {
+	$enthash = register_default();	# hash ref
+    }
        #create the parser object and parse the xml file
-    my $xmlfile = new XML::Parser(Style=>'Subs');
-    $xmlfile->setHandlers(Char => \&handle_char);
+    my $xmlfile = new XML::Parser(Style=>'Subs',
+				  ParseParamEnt => 1,
+				  ErrorContext  => 2,
+				  Handlers => {Char    => \&handle_char,
+				 	 ExternEnt => \&handle_extent}
+				);
     $xmlfile->parsefile($file);
     unless ($count) {carp "Error reading XML $!";}
     return $count;    
+}
+
+####################################################################
+# openxml() is a method for reading in an XML file.  It takes      #
+# several parameters: file (name of the xml file) ; increment      #
+# increment which defines how many records to read in ; and a      #
+# reference to a charset hash used to decode xml entities          #
+####################################################################
+sub openxml {
+    $marc_obj = shift;	# must be package global
+    my $params = shift;
+    my $file=$params->{file};
+    if (not(-e $file)) {xcarp "File \"$file\" doesn't exist"; return} 
+    $marc_obj->[0]{'format'}= 'xml'; #store format in object
+    $count = 0;
+    $marc_obj->[0]{'increment'}=$params->{'increment'} || 0;
+        #store increment in the object, default is 0
+    open (*file, $file);
+    binmode *file;
+    $marc_obj->[0]{'handle'}=\*file; #store filehandle in object
+    my $handle = $marc_obj->[0]{'handle'};
+    if (exists $params->{charset}) {
+        $enthash = $params->{charset};	# hash ref
+    }
+    else {
+        unless ($enthash) {
+	    $enthash = register_default();	# hash ref
+	}
+    }
+    my $p = new XML::Parser(Style=>'Subs',
+			    ParseParamEnt => 1,
+			    ErrorContext  => 2,
+			    Handlers => {Char    => \&handle_char,
+				ExternEnt => \&handle_extent}
+			   );
+
+	# Create the non-blocking parser
+    $marc_obj->[0]{'expat'} = $p->parse_start;
+
+    print "read in $count records\n" if $XDEBUG;
+    if ($count==0) {$count="0 but true"}
+    return $count;    
+}
+
+####################################################################
+# closexml() will close a file-handle that was opened with         #
+# openxml()                                                        #
+####################################################################
+sub closexml {
+    my $marc = shift;
+    $marc->[0]{'increment'}=0;
+    if (not($marc->[0]{'handle'})) {
+	xcarp "There isn't a MARC file to close"; 
+	return;
+    }
+
+    my $ok = close $marc->[0]{'handle'};
+
+    $marc->[0]{'expat'}->parse_done;
+    $marc->[0]{'handle'}=undef;
+    $marc->[0]{'expat'}=undef;
+    return $ok;
+}
+
+####################################################################
+# nextxml() will read in more records from a file that has         #
+# already been opened with openxml(). the increment can be         #
+# adjusted if necessary by passing a new value as a parameter. the # 
+# new records will be APPENDED to the MARC object                  #
+####################################################################
+sub nextxml {
+    $marc_obj=shift;
+    my $increment=shift;
+    my $handle = $marc_obj->[0]{'handle'};
+    if (not $handle) {
+	xcarp "There isn't a MARC file open"; 
+	return;
+    }
+    $marc_obj->[0]{'increment'}=$increment;
+    $count = 0;
+    local $/ = "</record>";
+
+    while (($increment==-1 or $count<$increment) and my $record=<$handle>) {
+        $marc_obj->[0]{'expat'}->parse_more($record);
+    }
+    return $count;
+}
+
+sub register_default {
+    # upper-register entities (8-bit to 7-bit)
+    my @hexchar = (0x80..0x8c,0x8f..0xa0,0xaf,0xbb,
+		   0xbe,0xbf,0xc7..0xdf,0xfc,0xfd,0xff);
+    my %inchar = map {sprintf ("x%2.2X",int $_), chr($_)} @hexchar;
+
+    $inchar{joiner} = chr(0x8d);	# zero width joiner
+    $inchar{nonjoin} = chr(0x8e);	# zero width non-joiner
+    $inchar{Lstrok} = chr(0xa1);	# latin capital letter l with stroke
+    $inchar{Ostrok} = chr(0xa2);	# latin capital letter o with stroke
+    $inchar{Dstrok} = chr(0xa3);	# latin capital letter d with stroke
+    $inchar{THORN} = chr(0xa4);		# latin capital letter thorn (icelandic)
+    $inchar{AElig} = chr(0xa5);		# latin capital letter AE
+    $inchar{OElig} = chr(0xa6);		# latin capital letter OE
+    $inchar{softsign} = chr(0xa7);	# modifier letter soft sign
+    $inchar{middot} = chr(0xa8);	# middle dot
+    $inchar{flat} = chr(0xa9);		# musical flat sign
+    $inchar{reg} = chr(0xaa);		# registered sign
+    $inchar{plusmn} = chr(0xab);	# plus-minus sign
+    $inchar{Ohorn} = chr(0xac);		# latin capital letter o with horn
+    $inchar{Uhorn} = chr(0xad);		# latin capital letter u with horn
+    $inchar{mlrhring} = chr(0xae);	# modifier letter right half ring (alif)
+    $inchar{mllhring} = chr(0xb0);	# modifier letter left half ring (ayn)
+    $inchar{lstrok} = chr(0xb1);	# latin small letter l with stroke
+    $inchar{ostrok} = chr(0xb2);	# latin small letter o with stroke
+    $inchar{dstrok} = chr(0xb3);	# latin small letter d with stroke
+    $inchar{thorn} = chr(0xb4);		# latin small letter thorn (icelandic)
+    $inchar{aelig} = chr(0xb5);		# latin small letter ae
+    $inchar{oelig} = chr(0xb6);		# latin small letter oe
+    $inchar{hardsign} = chr(0xb7);	# modifier letter hard sign
+    $inchar{inodot} = chr(0xb8);	# latin small letter dotless i
+    $inchar{pound} = chr(0xb9);		# pound sign
+    $inchar{eth} = chr(0xba);		# latin small letter eth
+    $inchar{ohorn} = chr(0xbc);		# latin small letter o with horn
+    $inchar{uhorn} = chr(0xbd);		# latin small letter u with horn
+    $inchar{deg} = chr(0xc0);		# degree sign
+    $inchar{scriptl} = chr(0xc1);	# latin small letter script l
+    $inchar{phono} = chr(0xc2);		# sound recording copyright
+    $inchar{copy} = chr(0xc3);		# copyright sign
+    $inchar{sharp} = chr(0xc4);		# sharp
+    $inchar{iquest} = chr(0xc5);	# inverted question mark
+    $inchar{iexcl} = chr(0xc6);		# inverted exclamation mark
+    $inchar{hooka} = chr(0xe0);		# combining hook above
+    $inchar{grave} = chr(0xe1);		# combining grave
+    $inchar{acute} = chr(0xe2);		# combining acute
+    $inchar{circ} = chr(0xe3);		# combining circumflex
+    $inchar{tilde} = chr(0xe4);		# combining tilde
+    $inchar{macr} = chr(0xe5);		# combining macron
+    $inchar{breve} = chr(0xe6);		# combining breve
+    $inchar{dot} = chr(0xe7);		# combining dot above
+    $inchar{diaer} = chr(0xe8);		# combining diaeresis
+    $inchar{uml} = chr(0xe8);		# combining umlaut
+    $inchar{caron} = chr(0xe9);		# combining hacek
+    $inchar{ring} = chr(0xea);		# combining ring above
+    $inchar{llig} = chr(0xeb);		# combining ligature left half
+    $inchar{rlig} = chr(0xec);		# combining ligature right half
+    $inchar{rcommaa} = chr(0xed);	# combining comma above right
+    $inchar{dblac} = chr(0xee);		# combining double acute
+    $inchar{candra} = chr(0xef);	# combining candrabindu
+    $inchar{cedil} = chr(0xf0);		# combining cedilla
+    $inchar{ogon} = chr(0xf1);		# combining ogonek
+    $inchar{dotb} = chr(0xf2);		# combining dot below
+    $inchar{dbldotb} = chr(0xf3);	# combining double dot below
+    $inchar{ringb} = chr(0xf4);		# combining ring below
+    $inchar{dblunder} = chr(0xf5);	# combining double underscore
+    $inchar{under} = chr(0xf6);		# combining underscore
+    $inchar{commab} = chr(0xf7);	# combining comma below
+    $inchar{rcedil} = chr(0xf8);	# combining right cedilla
+    $inchar{breveb} = chr(0xf9);	# combining breve below
+    $inchar{ldbltil} = chr(0xfa);	# combining double tilde left half
+    $inchar{rdbltil} = chr(0xfb);	# combining double tilde right half
+    $inchar{commaa} = chr(0xfe);	# combining comma above
+    if ($XDEBUG) {
+        foreach my $str (sort keys %inchar) {
+            printf "%s = %x\n", $str, ord($inchar{$str});
+        }
+    }
+    return \%inchar;
 }
 
 ####################################################################
@@ -212,6 +437,12 @@ sub _marc2xml {
     my $output;
     my $newline = $params->{lineterm} || "\n";
     my @records;
+    unless (exists $params->{charset}) {
+        unless (exists $marc->[0]{xmlchar}) {
+	    $marc->[0]{xmlchar} = ansel_default();	# hash ref
+	}
+	$params->{charset} = $marc->[0]{xmlchar};
+    }
     if ($params->{records}) {@records=@{$params->{records}}}
     else {for (my $i=1;$i<=$#$marc;$i++) {push(@records,$i)}}
     foreach my $i (@records) {
@@ -220,9 +451,7 @@ sub _marc2xml {
 	foreach my $fields (@{$recout->{array}}) { #cycle through each field 
 	    my $tag=$fields->[0];
 	    if ($tag<10) { #no indicators or subfields
-	          #replace & < > with their corresponding entities 
-		my $value=$fields->[1];
-		$value=~s/&/&amp;/og; $value=~s/</&lt;/og; $value=~s/>/&gt;/og;
+		my $value = _char2xml($fields->[1], $params->{charset});
 		$output.=qq(<field type="$tag">$value</field>$newline);
 	    }
 	    else { #indicators and subfields
@@ -230,10 +459,8 @@ sub _marc2xml {
 		my @subfldout = @{$fields}[3..$#{$fields}];		
 		while (@subfldout) { #cycle through subfields
 		    my $subfield_type = shift(@subfldout);
-		    my $subfield_value = shift(@subfldout);
-		    $subfield_value=~s/&/&amp;/og;
-		    $subfield_value=~s/</&lt;/og;
-		    $subfield_value=~s/>/&gt;/og;
+		    my $subfield_value = _char2xml( shift(@subfldout),
+						   $params->{charset} );
 		    $output .= qq(   <subfield type="$subfield_type">);
 		    $output .= qq($subfield_value</subfield>$newline);
 		} #finish cycling through subfields
@@ -243,6 +470,102 @@ sub _marc2xml {
 	$output.="</record>$newline$newline"; #put an extra newline to separate records
     }
     return $output;
+}
+
+sub _char2xml {
+    my @marc_string = split (//, shift);
+    my $charmap = shift;
+    local $^W = 0;	# no warnings
+	# the simple case only works for single byte entities
+    my $xml_string = join (//, map { ${$charmap}{$_} } @marc_string);
+    return $xml_string;
+}
+
+sub ansel_default {
+    my @hexchar = (0x00..0x08,0x0b,0x0c,0x0e..0x1f,0x80..0x8c,0x8f..0xa0,
+		   0xaf,0xbb,0xbe,0xbf,0xc7..0xdf,0xfc,0xfd,0xff);
+    my %outchar = map {chr($_), sprintf ("&x%2.2X;",int $_)} @hexchar;
+
+    my @ascchar = map {chr($_)} (0x09,0x0a,0x0d,0x20,0x21,0x23..0x25,
+				 0x28..0x3b,0x3d,0x3f..0x7f);
+    foreach my $asc (@ascchar) { $outchar{$asc} = $asc; }
+
+    $outchar{chr(0x22)} = '&quot;';	# quotation
+    $outchar{chr(0x26)} = '&amp;';	# ampersand
+    $outchar{chr(0x27)} = '&apos;';	# apostrophe
+    $outchar{chr(0x3c)} = '&lt;';	# less than
+    $outchar{chr(0x3e)} = '&gt;';	# greater than
+    $outchar{chr(0x8d)} = '&joiner;';	# zero width joiner
+    $outchar{chr(0x8e)} = '&nonjoin;';	# zero width non-joiner
+    $outchar{chr(0xa1)} = '&Lstrok;';	# latin capital letter l with stroke
+    $outchar{chr(0xa2)} = '&Ostrok;';	# latin capital letter o with stroke
+    $outchar{chr(0xa3)} = '&Dstrok;';	# latin capital letter d with stroke
+    $outchar{chr(0xa4)} = '&THORN;';	# latin capital letter thorn (icelandic)
+    $outchar{chr(0xa5)} = '&AElig;';	# latin capital letter AE
+    $outchar{chr(0xa6)} = '&OElig;';	# latin capital letter OE
+    $outchar{chr(0xa7)} = '&softsign;';	# modifier letter soft sign
+    $outchar{chr(0xa8)} = '&middot;';	# middle dot
+    $outchar{chr(0xa9)} = '&flat;';	# musical flat sign
+    $outchar{chr(0xaa)} = '&reg;';	# registered sign
+    $outchar{chr(0xab)} = '&plusmn;';	# plus-minus sign
+    $outchar{chr(0xac)} = '&Ohorn;';	# latin capital letter o with horn
+    $outchar{chr(0xad)} = '&Uhorn;';	# latin capital letter u with horn
+    $outchar{chr(0xae)} = '&mlrhring;';	# modifier letter right half ring (alif)
+    $outchar{chr(0xb0)} = '&mllhring;';	# modifier letter left half ring (ayn)
+    $outchar{chr(0xb1)} = '&lstrok;';	# latin small letter l with stroke
+    $outchar{chr(0xb2)} = '&ostrok;';	# latin small letter o with stroke
+    $outchar{chr(0xb3)} = '&dstrok;';	# latin small letter d with stroke
+    $outchar{chr(0xb4)} = '&thorn;';	# latin small letter thorn (icelandic)
+    $outchar{chr(0xb5)} = '&aelig;';	# latin small letter ae
+    $outchar{chr(0xb6)} = '&oelig;';	# latin small letter oe
+    $outchar{chr(0xb7)} = '&hardsign;';	# modifier letter hard sign
+    $outchar{chr(0xb8)} = '&inodot;';	# latin small letter dotless i
+    $outchar{chr(0xb9)} = '&pound;';	# pound sign
+    $outchar{chr(0xba)} = '&eth;';	# latin small letter eth
+    $outchar{chr(0xbc)} = '&ohorn;';	# latin small letter o with horn
+    $outchar{chr(0xbd)} = '&uhorn;';	# latin small letter u with horn
+    $outchar{chr(0xc0)} = '&deg;';	# degree sign
+    $outchar{chr(0xc1)} = '&scriptl;';	# latin small letter script l
+    $outchar{chr(0xc2)} = '&phono;';	# sound recording copyright
+    $outchar{chr(0xc3)} = '&copy;';	# copyright sign
+    $outchar{chr(0xc4)} = '&sharp;';	# sharp
+    $outchar{chr(0xc5)} = '&iquest;';	# inverted question mark
+    $outchar{chr(0xc6)} = '&iexcl;';	# inverted exclamation mark
+    $outchar{chr(0xe0)} = '&hooka;';	# combining hook above
+    $outchar{chr(0xe1)} = '&grave;';	# combining grave
+    $outchar{chr(0xe2)} = '&acute;';	# combining acute
+    $outchar{chr(0xe3)} = '&circ;';	# combining circumflex
+    $outchar{chr(0xe4)} = '&tilde;';	# combining tilde
+    $outchar{chr(0xe5)} = '&macr;';	# combining macron
+    $outchar{chr(0xe6)} = '&breve;';	# combining breve
+    $outchar{chr(0xe7)} = '&dot;';	# combining dot above
+    $outchar{chr(0xe8)} = '&uml;';	# combining diaeresis (umlaut)
+    $outchar{chr(0xe9)} = '&caron;';	# combining hacek
+    $outchar{chr(0xea)} = '&ring;';	# combining ring above
+    $outchar{chr(0xeb)} = '&llig;';	# combining ligature left half
+    $outchar{chr(0xec)} = '&rlig;';	# combining ligature right half
+    $outchar{chr(0xed)} = '&rcommaa;';	# combining comma above right
+    $outchar{chr(0xee)} = '&dblac;';	# combining double acute
+    $outchar{chr(0xef)} = '&candra;';	# combining candrabindu
+    $outchar{chr(0xf0)} = '&cedil;';	# combining cedilla
+    $outchar{chr(0xf1)} = '&ogon;';	# combining ogonek
+    $outchar{chr(0xf2)} = '&dotb;';	# combining dot below
+    $outchar{chr(0xf3)} = '&dbldotb;';	# combining double dot below
+    $outchar{chr(0xf4)} = '&ringb;';	# combining ring below
+    $outchar{chr(0xf5)} = '&dblunder;';	# combining double underscore
+    $outchar{chr(0xf6)} = '&under;';	# combining underscore
+    $outchar{chr(0xf7)} = '&commab;';	# combining comma below
+    $outchar{chr(0xf8)} = '&rcedil;';	# combining right cedilla
+    $outchar{chr(0xf9)} = '&breveb;';	# combining breve below
+    $outchar{chr(0xfa)} = '&ldbltil;';	# combining double tilde left half
+    $outchar{chr(0xfb)} = '&rdbltil;';	# combining double tilde right half
+    $outchar{chr(0xfe)} = '&commaa;';	# combining comma above
+    if ($XDEBUG) {
+        foreach my $num (sort keys %outchar) {
+            printf "%x = %s\n", ord($num), $outchar{$num};
+        }
+    }
+    return \%outchar;
 }
 
 return 1;
@@ -277,6 +600,7 @@ MARC::XML - A subclass of MARC.pm to provide XML support.
 MARC::XML is a subclass of MARC.pm which provides methods for round-trip
 conversions between MARC and XML. MARC::XML requires that you have the
 CPAN modules MARC.pm and XML::Parser installed in your Perl library.
+Version 1.04 of MARC.pm and 2.27 of XML::Parser (or later) are required.
 As a subclass of MARC.pm a MARC::XML object will by default have the full
 functionality of a MARC.pm object. See the MARC.pm documentation for details.
 
@@ -462,8 +786,8 @@ extra format choice "XML" (which is also the default). Internally, the
 XML source is converted to a series of B<addfield()> and B<createrecord()>
 calls. The order of MARC tags is preserved by default. But if an optional
 third argument is passed to new(), it is used as the I<ordered> option for
-the B<addfield()> calls. Due to the nature of XML::Parser, it is not
-possible to read only part of an XML input file. Some examples:
+the B<addfield()> calls. Like MARC.pm, it is not possible to read only part
+of an XML input file using new(). Some examples:
 
       #read in an XML file called myxmlfile.xml
    use MARC::XML;
@@ -473,7 +797,8 @@ possible to read only part of an XML input file. Some examples:
 Since the full funtionality of MARC.pm is also available you can read in
 other types of files as well. Although new() with no arguments will create
 an object with no records, just like MARC.pm, XML format not supported by
-openmarc() and nextmarc() for input. But you can output XML from a different
+openmarc() and nextmarc() for input. The openxml() and nextxml() methods
+provide similar operation. And you can output from XML to a different
 format source.
 
       #read in a MARC file called mymarcfile.mrc
@@ -484,7 +809,18 @@ format source.
 =head2 output()
 
 MARC::XML's output() method allows you to output the MARC object as an XML
-file. It takes four arguments: I<file>, I<format>, I<lineterm>, and I<records>. 
+file. It takes eight arguments: I<file>, I<format>, I<lineterm>, and
+I<records> have the same function as in MARC.pm. If not specified, I<format>
+defaults to "xml" and I<lineterm> defaults to "\n". A I<charset> parameter
+accepts a hash-reference to a user supplied character translation table.
+The internal default is based on the LoC "register.sgm" table supplied
+with the LoC. SGML utilities. You can use the B<ansel_default> method to get
+a hash-reference to it if you only want to modify a couple of characters.
+See example below. The I<encoding>, I<dtd_file>, and I<standalone> arguments
+correspond to the specified fields in an XML header. If not specified,
+I<standalone> defaults to "yes" and I<encoding> to "US-ASCII". If an optional
+I<dtd_file> is specified, a B<Document Type Declaration> is added to the
+output to contain the data.
 
    use MARC::XML;
    $x = MARC::XML->new("mymarcfile.mrc","usmarc");
@@ -521,6 +857,11 @@ So you could read in an XML file and then output it as ascii text:
    $x = MARC::XML->new("myxmlfile.xml","xml");
    $x->output({file=>">mytextfile.txt","ascii");
 
+Two global boolean variables are reserved for test and debugging. Both are
+"0" (off) by default. The C<$XTEST> variable disables internal error messages
+generated using I<Carp>. It should only be used in the automatic test suite.
+The C<$XDEBUG> variable adds verbose diagnostic messages.
+
 =head1 EXAMPLES
 
 The B<eg> subdirectory contains a few complete examples to get you started.
@@ -543,9 +884,9 @@ perl(1), MARC.pm, MARC http://lcweb.loc.gov/marc , XML http://www.w3.org/xml .
 
 =head1 COPYRIGHT
 
-Copyright (C) 1999, Bearden, Birthisel, Lane, McFadden, and Summers.
+Copyright (C) 2000, Bearden, Birthisel, Lane, McFadden, and Summers.
 All rights reserved. This module is free software; you can redistribute
-it and/or modify it under the same terms as Perl itself. 23 November 1999.
+it and/or modify it under the same terms as Perl itself. 18 January 2000
 Portions Copyright (C) 1999, Duke University, Lane.
 
 =cut

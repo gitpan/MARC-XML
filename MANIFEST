@@ -6,6 +6,9 @@ README
 README.txt
 eg/README
 eg/marc2xml.pl
+eg/pacific.pl
+eg/pacific0.dat
+eg/read_pfa.pl
 eg/simple.pl
 eg/xml2marc.pl
 t/MARCopt.pm
@@ -17,3 +20,4 @@ t/test1.t
 t/test2.t
 t/test3.t
 t/test4.t
+t/ansel.ent

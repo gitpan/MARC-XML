@@ -1,5 +1,5 @@
 MARC::XML (XML extensions for MAchine Readable Cataloging)
-VERSION=0.25, 23 November 1999
+VERSION=0.3, 25 January 2000
 
 This is a cross-platform module. All of the files except README.txt
 are LF-only terminations. You will need a better editor than Notepad
@@ -11,14 +11,22 @@ MARC.pm is a Perl 5 module for reading in, manipulating, and outputting
 bibliographic records in the USMARC format. You will need to have Perl
 5.004 or greater for MARC.pm to work properly. MARC::XML adds support
 for converting to and from XML format files. You will need to have both
-the MARC and XML::Parser modules installed (both available from CPAN,
-XML::Parser is included in Win32 Perl versions 5.005 and above - it is
-required by PPM).
+the MARC [1.04] and XML::Parser [2.27] modules installed (both available
+from CPAN. XML::Parser is included in Win32 Perl versions 5.005 and above -
+it is required by PPM. It may not be available for 5.004 and earlier
+on Win32.).
 
 MARC::XML can output both single and batches of MARC records. The limit on
 the number of records in a batch is determined by the memory capacity of
-the machine you are running. The nature of XML::Parser requires reading
-a complete XML file during input.
+the machine you are running. Starting with Version 0.3, MARC::XML can also
+read both single records and batches. The nature of earlier versions of
+XML::Parser required reading a complete XML file during input.
+
+Version 0.3 is a major update. Among the new features are Document Type
+Declaration support, character set output, entity input translation,
+and incremental input processing. Some of these have limited test suite
+coverage and minimal running time. Make sure you test thoroughly any
+applications before using them for "production".
 
 FILES:
 
@@ -39,12 +47,16 @@ FILES:
     t/makrbrkr.mrc	- LoC. MARCMaker reference records
     t/makrtest.src	- MARCMaker source for makrbrkr.mrc
     t/brkrtest.ref	- MARCBreaker output from makrbrkr.mrc
+    t/ansel.ent		- 8-bit Entity declarations for tests and examples
 
     eg			- example directory
     eg/simple.pl	- converts t/marc.dat into output.xml
     eg/marc2xml.pl	- simple command line converter
     eg/xml2marc.pl	- another simple command line converter
     eg/README		- instructions for examples
+    eg/pacific.pl	- outputs xml from "corrupt" MARC data
+    eg/pacific0.dat	- source data for pacific.pl
+    eg/read_pfa.pl	- reads xml written by pacific.pl and remaps Entities
 
 INSTALL and TEST:
 
@@ -70,11 +82,11 @@ indicate if any unexpected errors occur (not ok).
 Once you have installed, you can check if Perl can find it. Change to
 some other directory and execute from the command line:
 
-            perl -e "use MARC"
+            perl -e "use MARC::XML"
 
 No response that means everything is OK! If you get an error like
 * Can't locate method "use" via package MARC *, then Perl is not
-able to find MARC.pm--double check that the file copied it into the
+able to find XML.pm--double check that the file copied it into the
 right place during the install.
 
 NOTES:
@@ -84,13 +96,19 @@ We'd be happy to try to help. Also, please contact us if you notice any
 bugs, or if you would like to suggest an improvement/enhancement. Email
 addresses are listed at the bottom of this page.
 
+Due to the number of the changes in Version 0.3, there are probably
+some bugs, documentation holes, and "speed bumps" in the code. Please
+report them if you find any. You can only have one xml file open for
+input at a time. That is a known limitation rather than a bug. I do
+not expect the module to be thread-safe, either.
+
 The module is provided in standard CPAN distribution format. Additional
 documentation is created during the installation (html and man formats).
 See the MARC module documentation for more detail on inherited methods.
 
 Download the latest version from CPAN or:
 
-    http://libstaff.lib.odu.edu/depts/systems/iii/scripts/MARCpm
+    http://marcpm.sourceforge.net
 
 AUTHORS:
 
@@ -102,7 +120,7 @@ AUTHORS:
 
 COPYRIGHT
 
-Copyright (C) 1999, Bearden, Birthisel, Lane, McFadden, and Summers.
+Copyright (C) 2000, Bearden, Birthisel, Lane, McFadden, and Summers.
 All rights reserved. This module is free software; you can redistribute
 it and/or modify it under the same terms as Perl itself.
 Portions Copyright (C) 1999, Duke University, Lane.

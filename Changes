@@ -17,3 +17,18 @@ Revision history for Perl extension MARC::XML.
 	- add "ordered" option to new()
 	- numerous documentation changes
 
+0.26  Fri Jan 7 22:35:40 EST 2000 <Summers>
+	- Corrected dangerous interpolation in field_ handler
+
+0.3   Tue Jan 25 15:43:55 CST 2000 <Birthisel>
+	- update to XML::Parser 2.27 and MARC 1.04
+	- add Document Type Declaration support
+	- header defaults to "US-ASCII"
+	- add character set output processing and ansel_default
+	- add entity input translation and register_default
+	- add incremental input file processing: openxml, nextxml, closexml
+	- add eg/pacific.pl, eg/pacific0.dat, and eg/read_pfa.pl
+	- add t/ansel.ent and expand test2.t
+	- rename $XDEBUG, add $XTEST and xcarp()
+	- add "wrapper" methods output_header, output_body, output_footer
+

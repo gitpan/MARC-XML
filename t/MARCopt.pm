@@ -2,9 +2,9 @@ package MARCopt;
 # Inheritance test for test3.t only
 
 use vars qw($VERSION @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS);
-$VERSION = '0.25';
+$VERSION = '0.3';
 require Exporter;
-use MARC::XML;
+use MARC::XML 0.3;
 @ISA = qw( Exporter MARC::XML );
 @EXPORT= qw();
 @EXPORT_OK= @MARC::XML::EXPORT_OK;

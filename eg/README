@@ -14,3 +14,11 @@ This directory contains a few sample scripts that use MARC::XML.
 
   usage:
   xml2marc.pl inputfile outputfile
+
+- pacific.pl converts not_quite_compliant MARC records from an old
+  MS-DOS program into proper MARC and XML
+
+- read_pfa.pl reads the output.xml file created by pacific.pl one record
+  at a time and demonstrates remapping an entity into multiple characters.
+
+  pacific0.dat is an example of the corrupt "before" data
