@@ -1,126 +1,31 @@
-MARC::XML (XML extensions for MAchine Readable Cataloging)
-VERSION=0.4, 23 April 2000
+MARC-XML
+--------
 
-This is a cross-platform module. All of the files except README.txt
-are LF-only terminations. You will need a better editor than Notepad
-to read them on Win32. README.txt is README with CRLF.
+MARC-XML is an extension to the MARC-Record distribution for working with 
+XML data encoded using the MARC21slim XML schema from the Library of Congress.
 
-DESCRIPTION:
+For more details see: http://www.loc.gov/standards/marcxml/
 
-MARC.pm is a Perl 5 module for reading in, manipulating, and outputting
-bibliographic records in the USMARC format. You will need to have Perl
-5.004 or greater for MARC.pm to work properly. MARC::XML adds support
-for converting to and from XML format files. You will need to have both
-the MARC [1.07] and XML::Parser [2.27] modules installed (both available
-from CPAN. XML::Parser is included in Win32 Perl versions 5.005 and above -
-it is required by PPM. It may not be available for 5.004 and earlier
-on Win32.).
+INSTALLATION
 
-MARC::XML can output both single and batches of MARC records. The limit on
-the number of records in a batch is determined by the memory capacity of
-the machine you are running. Starting with Version 0.3, MARC::XML can also
-read both single records and batches. The nature of earlier versions of
-XML::Parser required reading a complete XML file during input.
+To install this module type the following:
 
-Version 0.3 is a major update. Among the new features are Document Type
-Declaration support, character set output, entity input translation,
-and incremental input processing. Some of these have limited test suite
-coverage and minimal running time. Make sure you test thoroughly any
-applications before using them for "production".
+   perl Makefile.PL
+   make
+   make test
+   make install
 
-FILES:
+DEPENDENCIES
 
-    Changes		- for history lovers
-    Makefile.PL		- the "starting point" for traditional reasons
-    MANIFEST		- file list
-    README		- this file for CPAN
-    README.txt		- this file for DOS
-    XML.pm		- the reason you're reading this
+This module requires these other modules and libraries:
 
-    t			- test directory
-    t/marc.dat		- two record data file for testing
-    t/test1.t		- basic tests, search, update - MARC input
-    t/test2.t		- MARCMaker format tests
-    t/test3.t		- Inheritance version of test1.t
-    t/test4.t		- XML input version of test1.t
-    t/MARCopt.pm	- Inheritance stub module
-    t/makrbrkr.mrc	- LoC. MARCMaker reference records
-    t/makrtest.src	- MARCMaker source for makrbrkr.mrc
-    t/brkrtest.ref	- MARCBreaker output from makrbrkr.mrc
-    t/ansel.ent		- 8-bit Entity declarations for tests and examples
+- MARC::Record
+- XML::SAX
 
-    eg			- example directory
-    eg/simple.pl	- converts t/marc.dat into output.xml
-    eg/marc2xml.pl	- simple command line converter
-    eg/xml2marc.pl	- another simple command line converter
-    eg/README		- instructions for examples
-    eg/pacific.pl	- outputs xml from "corrupt" MARC data
-    eg/pacific0.dat	- source data for pacific.pl
-    eg/read_pfa.pl	- reads xml written by pacific.pl and remaps Entities
+COPYRIGHT AND LICENCE
 
-INSTALL and TEST:
+Copyright (C) 2003 Ed Summers
 
-On linux and Unix, this distribution uses Makefile.PL and the "standard"
-install sequence for CPAN modules:
-	perl Makefile.PL
-	make
-	make test
-	make install
+This library is free software; you can redistribute it and/or modify
+it under the same terms as Perl itself. 
 
-On Win32, Makefile.PL creates equivalent scripts for the "make-deprived"
-and follows a similar sequence.
-	perl Makefile.PL
-	perl test.pl
-	perl install.pl
-
-Both sequences create install files and directories. The test uses a
-small sample input file and creates outputs in various formats. You can
-specify an optional PAUSE (0..5 seconds) between pages of output. The
-'perl t/test1.pl PAUSE' form works on all OS types. The test will
-indicate if any unexpected errors occur (not ok).
-
-Once you have installed, you can check if Perl can find it. Change to
-some other directory and execute from the command line:
-
-            perl -e "use MARC::XML"
-
-No response that means everything is OK! If you get an error like
-* Can't locate method "use" via package MARC *, then Perl is not
-able to find XML.pm--double check that the file copied it into the
-right place during the install.
-
-NOTES:
-
-Please let us know if you run into any difficulties using MARC::XML --
-We'd be happy to try to help. Also, please contact us if you notice any
-bugs, or if you would like to suggest an improvement/enhancement. Email
-addresses are listed at the bottom of this page.
-
-Due to the number of the changes in Version 0.3, there are probably
-some bugs, documentation holes, and "speed bumps" in the code. Please
-report them if you find any. You can only have one xml file open for
-input at a time. That is a known limitation rather than a bug. I do
-not expect the module to be thread-safe, either.
-
-The module is provided in standard CPAN distribution format. Additional
-documentation is created during the installation (html and man formats).
-See the MARC module documentation for more detail on inherited methods.
-
-Download the latest version from CPAN or:
-
-    http://marcpm.sourceforge.net
-
-AUTHORS:
-
-    Chuck Bearden cbearden@rice.edu
-    Bill Birthisel wcbirthisel@alum.mit.edu
-    Charles McFadden chuck@vims.edu
-    Derek Lane dereklane@pobox.com
-    Ed Summers ed@cheetahmail.com
-
-COPYRIGHT
-
-Copyright (C) 1999,2000, Bearden, Birthisel, Lane, McFadden, and Summers.
-All rights reserved. This module is free software; you can redistribute
-it and/or modify it under the same terms as Perl itself. 23 April 2000.
-Portions Copyright (C) 1999,2000, Duke University, Lane.
