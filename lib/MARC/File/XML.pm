@@ -5,7 +5,7 @@ use base qw( MARC::File );
 use MARC::Record;
 use MARC::File::SAX;
 
-our $VERSION = '0.50';
+our $VERSION = '0.51';
 
 my $handler = MARC::File::SAX->new();
 my $parser = XML::SAX::ParserFactory->parser( Handler => $handler );
@@ -118,6 +118,8 @@ sub encode {
 =item * Support for callback filters in decode().
 
 =item * Command line utilities marc2xml, etc.
+
+=back
 
 =head1 SEE ALSO
 
