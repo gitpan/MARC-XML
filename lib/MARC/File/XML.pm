@@ -5,7 +5,7 @@ use base qw( MARC::File );
 use MARC::Record;
 use MARC::File::SAX;
 
-our $VERSION = '0.51';
+our $VERSION = '0.53';
 
 my $handler = MARC::File::SAX->new();
 my $parser = XML::SAX::ParserFactory->parser( Handler => $handler );
@@ -58,7 +58,7 @@ sub _next {
     my $xml = <$fh>;
 
     ## trim stuff before the start record element 
-    $xml =~ s/.*<record>/<record>/s;
+    $xml =~ s/.*<record.*?>/<record>/s;
 
     ## return undef if there isn't a good chunk of xml
     return if ( $xml !~ m|<record>.*</record>|s );
@@ -67,7 +67,7 @@ sub _next {
     return( $xml );
 }
 
-=head1 decode()
+=head2 decode()
 
 You probably don't ever want to call this method directly. If you do 
 you should pass in a MARC::Record as the first argument, and a chunk of XML 
