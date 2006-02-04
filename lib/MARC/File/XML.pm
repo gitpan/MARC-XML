@@ -2,17 +2,26 @@ package MARC::File::XML;
 
 use warnings;
 use strict;
+use vars qw( $VERSION );
 use base qw( MARC::File );
 use MARC::Record;
 use MARC::Field;
 use MARC::File::SAX;
+use XML::SAX qw(Namespaces Validation);
+
+use MARC::Charset qw( marc8_to_utf8 utf8_to_marc8 );
 use IO::File;
 use Carp qw( croak );
+use Encode ();
 
-our $VERSION = '0.7';
+$VERSION = '0.8';
 
 my $handler = MARC::File::SAX->new();
-my $parser = XML::SAX::ParserFactory->parser( Handler => $handler );
+
+my $factory = XML::SAX::ParserFactory->new();
+$factory->require_feature(Namespaces);
+
+my $parser = $factory->parser( Handler => $handler, ProtocolEncoding => 'UTF-8' );
 
 
 =head1 NAME
@@ -114,7 +123,7 @@ to serialize more than one record as XML.
 A constructor for creating a MARC::File::XML object that can write XML to a
 file. You must pass in the name of a file to write XML to.
 
-    my $file = MARC::XML::File->out( $filename );
+    my $file = MARC::File::XML->out( $filename );
 
 =cut
 
@@ -208,9 +217,8 @@ broken records that are in ISO-8859-1 (ANSI) format with 8-bit characters.
 =cut 
 
 sub header {
-    my $encoding = shift || 'UTF-8';
     return( <<MARC_XML_HEADER );
-<?xml version="1.0" encoding="$encoding"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <collection xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.loc.gov/MARC21/slim http://www.loc.gov/standards/marcxml/schema/MARC21slim.xsd" xmlns="http://www.loc.gov/MARC21/slim">
 MARC_XML_HEADER
 }
@@ -233,15 +241,37 @@ Returns a chunk of XML suitable for placement between the header and the footer.
 
 sub record {
     my $record = shift;
+
+    my $_transcode = 0;
+    my $ldr = $record->leader;
+    my $original_charset;
+    my $original_encoding = substr($ldr,9,1);
+
+    # Does the record think it is already Unicode?
+    if ($original_encoding ne 'a') {
+    	# If not, we'll make it so
+        $_transcode++;
+	
+    	# XXX Need to generat a '066' field here, but I don't understand how yet.
+
+	substr($ldr,9,1,'a');
+	$record->leader( $ldr );
+	if ( ($original_charset) = $record->field('066') ) {
+		$record->delete_field( $original_charset );
+	}
+	
+    }
+
     my @xml = ();
     push( @xml, "<record>" );
-    push( @xml, "  <leader>" . escape($record->leader()) . "</leader>" );
+    push( @xml, "  <leader>" . escape( $record->leader ) . "</leader>" );
+
     foreach my $field ( $record->fields() ) {
         my $tag = $field->tag();
         if ( $field->is_control_field() ) { 
-            my $data = $field->data();
+	    my $data = $field->data;
             push( @xml, qq(  <controlfield tag="$tag">) .
-                escape($data). qq(</controlfield>) );
+                escape( ($_transcode ? marc8_to_utf8($data) : $data) ). qq(</controlfield>) );
         } else {
             my $i1 = $field->indicator( 1 );
             my $i2 = $field->indicator( 2 );
@@ -249,12 +279,21 @@ sub record {
             foreach my $subfield ( $field->subfields() ) { 
                 my ( $code, $data ) = @$subfield;
                 push( @xml, qq(    <subfield code="$code">).
-                    escape($data).qq(</subfield>) );
+                    escape( ($_transcode ? marc8_to_utf8($data) : $data) ).qq(</subfield>) );
             }
             push( @xml, "  </datafield>" );
         }
     }
     push( @xml, "</record>\n" );
+
+    if ($_transcode) {
+    	if (defined $original_charset) {
+        	$record->insert_fields_ordered($original_charset);
+	}
+	substr($ldr,9,1,$original_encoding);
+	$record->leader( $ldr );
+    }
+
     return( join( "\n", @xml ) );
 }
 
@@ -345,18 +384,18 @@ broken records that are in ISO-8859-1 (ANSI) format with 8-bit characters.
 
 sub encode {
     my $record = shift;
+
     my @xml = ();
-    push( @xml, header(shift) );
+    push( @xml, header() );
     push( @xml, record( $record ) );
     push( @xml, footer() );
+
     return( join( "\n", @xml ) );
 }
 
 =head1 TODO
 
 =over 4
-
-=item * Support for character translation using MARC::Charset.
 
 =item * Support for callback filters in decode().
 
