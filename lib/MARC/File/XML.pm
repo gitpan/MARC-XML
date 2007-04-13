@@ -14,7 +14,7 @@ use IO::File;
 use Carp qw( croak );
 use Encode ();
 
-$VERSION = '0.84';
+$VERSION = '0.85';
 
 my $handler = MARC::File::SAX->new();
 
@@ -445,7 +445,7 @@ sub decode {
     $parser->{ tagStack } = [];
     $parser->{ subfields } = [];
     $parser->{ Handler }{ record } = MARC::Record->new();
-    $parser->{ Handler }{ toMARC8 } = (lc($format) ne 'unimarc' && $enc && lc($enc) =~ /^utf-?8$/o) ? 0 : 1;
+    $parser->{ Handler }{ toMARC8 } = (lc($format) eq 'unimarc' && $enc && lc($enc) =~ /^utf-?8$/o) ? 0 : 1;
 
     $parser->parse_string( $text );
 
