@@ -14,7 +14,7 @@ use IO::File;
 use Carp qw( croak );
 use Encode ();
 
-$VERSION = '0.86';
+$VERSION = '0.87';
 
 my $handler = MARC::File::SAX->new();
 
@@ -504,7 +504,7 @@ sub _unimarc_encoding {
 	} elsif ($enc eq '50') {
 		return 'UTF-8';
 	} else {
-		die "Unsupported UNIMARC charater encoding [$enc] for XML output";
+		die "Unsupported UNIMARC character encoding [$enc] for XML output for $f; 100$a -> " . $r->subfield(100 => 'a');
 	}
 }
 
