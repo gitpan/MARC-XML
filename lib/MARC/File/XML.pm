@@ -14,7 +14,7 @@ use IO::File;
 use Carp qw( croak );
 use Encode ();
 
-$VERSION = '0.87';
+$VERSION = '0.88_1';
 
 my $handler = MARC::File::SAX->new();
 
@@ -179,19 +179,30 @@ to serialize more than one record as XML.
 =head2 out()
 
 A constructor for creating a MARC::File::XML object that can write XML to a
-file. You must pass in the name of a file to write XML to.
+file. You must pass in the name of a file to write XML to.  If the $encoding
+parameter or the DefaultEncoding (see above) is set to UTF-8 then the binmode
+of the output file will be set appropriately.
 
-    my $file = MARC::File::XML->out( $filename );
+    my $file = MARC::File::XML->out( $filename [, $encoding] );
 
 =cut
 
 sub out {
-    my ( $class, $filename ) = @_;
+    my ( $class, $filename, $enc ) = @_;
     my $fh = IO::File->new( ">$filename" ) or croak( $! );
+    $enc ||= $_load_args{DefaultEncoding};
+
+    if ($enc =~ /^utf-?8$/oi) {
+        $fh->binmode(':utf8');
+    } else {
+        $fh->binmode(':raw');
+    }
+
     my %self = ( 
         filename    => $filename,
         fh          => $fh, 
-        header      => 0
+        header      => 0,
+        encoding    => $enc
     );
     return( bless \%self, ref( $class ) || $class );
 }
@@ -216,7 +227,7 @@ sub write {
     }
     ## print the XML header if we haven't already
     if ( ! $self->{ header } ) { 
-    	$enc ||= $_load_args{DefaultEncoding};
+    	$enc ||= $self->{ encoding } || $_load_args{DefaultEncoding};
         $self->{ fh }->print( header( $enc ) );
         $self->{ header } = 1;
     } 
@@ -309,22 +320,12 @@ sub record {
 
     my $_transcode = 0;
     my $ldr = $record->leader;
-    my $original_charset;
     my $original_encoding = substr($ldr,9,1);
 
     # Does the record think it is already Unicode?
-    if ($original_encoding ne 'a' && lc($format) ne 'unimarc') {
-    	# If not, we'll make it so
+    if ($original_encoding ne 'a' && lc($format) !~ /^unimarc/o) {
+        # If not, we'll make it so
         $_transcode++;
-	
-    	# XXX Need to generat a '066' field here, but I don't understand how yet.
-
-	substr($ldr,9,1,'a');
-	$record->leader( $ldr );
-	if ( ($original_charset) = $record->field('066') ) {
-		$record->delete_field( $original_charset );
-	}
-	
     }
 
     my @xml = ();
@@ -333,23 +334,23 @@ sub record {
         push @xml, <<HEADER
 <?xml version="1.0" encoding="$enc"?>
 <record
-  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  xsi:schemaLocation="http://www.loc.gov/MARC21/slim http://www.loc.gov/ standards/marcxml/schema/MARC21slim.xsd"
-  xmlns="http://www.loc.gov/MARC21/slim">
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.loc.gov/MARC21/slim http://www.loc.gov/ standards/marcxml/schema/MARC21slim.xsd"
+    xmlns="http://www.loc.gov/MARC21/slim">
 HEADER
 
     } else {
         push( @xml, "<record>" );
     }
-    
+
     push( @xml, "  <leader>" . escape( $record->leader ) . "</leader>" );
 
     foreach my $field ( $record->fields() ) {
         my $tag = $field->tag();
         if ( $field->is_control_field() ) { 
-	    my $data = $field->data;
+            my $data = $field->data;
             push( @xml, qq(  <controlfield tag="$tag">) .
-                escape( ($_transcode ? marc8_to_utf8($data) : $data) ). qq(</controlfield>) );
+                    escape( ($_transcode ? marc8_to_utf8($data) : $data) ). qq(</controlfield>) );
         } else {
             my $i1 = $field->indicator( 1 );
             my $i2 = $field->indicator( 2 );
@@ -357,7 +358,7 @@ HEADER
             foreach my $subfield ( $field->subfields() ) { 
                 my ( $code, $data ) = @$subfield;
                 push( @xml, qq(    <subfield code="$code">).
-                    escape( ($_transcode ? marc8_to_utf8($data) : $data) ).qq(</subfield>) );
+                        escape( ($_transcode ? marc8_to_utf8($data) : $data) ).qq(</subfield>) );
             }
             push( @xml, "  </datafield>" );
         }
@@ -365,11 +366,8 @@ HEADER
     push( @xml, "</record>\n" );
 
     if ($_transcode) {
-    	if (defined $original_charset) {
-        	$record->insert_fields_ordered($original_charset);
-	}
-	substr($ldr,9,1,$original_encoding);
-	$record->leader( $ldr );
+        substr($ldr,9,1,$original_encoding);
+        $record->leader( $ldr );
     }
 
     return( join( "\n", @xml ) );
