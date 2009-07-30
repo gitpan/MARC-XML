@@ -14,22 +14,16 @@ use IO::File;
 use Carp qw( croak );
 use Encode ();
 
-$VERSION = '0.88';
-
-my $handler = MARC::File::SAX->new();
+$VERSION = '0.91';
 
 my $factory = XML::SAX::ParserFactory->new();
 $factory->require_feature(Namespaces);
 
-my $parser = $factory->parser( Handler => $handler, ProtocolEncoding => 'UTF-8' );
-
 sub import {
-	my $class = shift;
-	%_load_args = @_;
-	$_load_args{ DefaultEncoding } ||= 'UTF-8';
-	$_load_args{ RecordFormat } ||= 'USMARC';
-
- 	$parser = $factory->parser( Handler => $handler, ProtocolEncoding => $_load_args{DefaultEncoding} );
+    my $class = shift;
+    %_load_args = @_;
+    $_load_args{ DefaultEncoding } ||= 'UTF-8';
+    $_load_args{ RecordFormat } ||= 'USMARC';
 }
 
 =head1 NAME
@@ -105,12 +99,12 @@ formats are B<MARC21>, B<USMARC>, B<UNIMARC> and B<UNIMARCAUTH>.
 =cut
 
 sub default_record_format {
-	my $self = shift;
-	my $format = shift;
+    my $self = shift;
+    my $format = shift;
 
-	$_load_args{RecordFormat} = $format if ($format);
+    $_load_args{RecordFormat} = $format if ($format);
 
-	return $_load_args{RecordFormat};
+    return $_load_args{RecordFormat};
 }
 
 
@@ -227,7 +221,7 @@ sub write {
     }
     ## print the XML header if we haven't already
     if ( ! $self->{ header } ) { 
-    	$enc ||= $self->{ encoding } || $_load_args{DefaultEncoding};
+        $enc ||= $self->{ encoding } || $_load_args{DefaultEncoding};
         $self->{ fh }->print( header( $enc ) );
         $self->{ header } = 1;
     } 
@@ -313,7 +307,7 @@ Returns a chunk of XML suitable for placement between the header and the footer.
 sub record {
     my $record = shift;
     my $format = shift;
-    my $without_header = shift;
+    my $include_full_record_header = shift;
     my $enc = shift;
 
     $format ||= $_load_args{RecordFormat};
@@ -326,16 +320,18 @@ sub record {
     if ($original_encoding ne 'a' && lc($format) !~ /^unimarc/o) {
         # If not, we'll make it so
         $_transcode++;
+        substr($ldr,9,1,'a');
+        $record->leader( $ldr );
     }
 
     my @xml = ();
 
-    if ($without_header) {
+    if ($include_full_record_header) {
         push @xml, <<HEADER
 <?xml version="1.0" encoding="$enc"?>
 <record
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:schemaLocation="http://www.loc.gov/MARC21/slim http://www.loc.gov/ standards/marcxml/schema/MARC21slim.xsd"
+    xsi:schemaLocation="http://www.loc.gov/MARC21/slim http://www.loc.gov/standards/marcxml/schema/MARC21slim.xsd"
     xmlns="http://www.loc.gov/MARC21/slim">
 HEADER
 
@@ -346,17 +342,17 @@ HEADER
     push( @xml, "  <leader>" . escape( $record->leader ) . "</leader>" );
 
     foreach my $field ( $record->fields() ) {
-        my $tag = $field->tag();
+        my ($tag) = escape( $field->tag() );
         if ( $field->is_control_field() ) { 
             my $data = $field->data;
             push( @xml, qq(  <controlfield tag="$tag">) .
                     escape( ($_transcode ? marc8_to_utf8($data) : $data) ). qq(</controlfield>) );
         } else {
-            my $i1 = $field->indicator( 1 );
-            my $i2 = $field->indicator( 2 );
+            my ($i1) = escape( $field->indicator( 1 ) );
+            my ($i2) = escape( $field->indicator( 2 ) );
             push( @xml, qq(  <datafield tag="$tag" ind1="$i1" ind2="$i2">) );
             foreach my $subfield ( $field->subfields() ) { 
-                my ( $code, $data ) = @$subfield;
+                my ( $code, $data ) = ( escape( $$subfield[0] ), $$subfield[1] );
                 push( @xml, qq(    <subfield code="$code">).
                         escape( ($_transcode ? marc8_to_utf8($data) : $data) ).qq(</subfield>) );
             }
@@ -422,7 +418,6 @@ It is normally invoked by a call to next(), see L<MARC::Batch> or L<MARC::File>.
 =cut
 
 sub decode { 
-
     my $text; 
     my $location = '';
     my $self = shift;
@@ -430,34 +425,35 @@ sub decode {
     ## see MARC::File::USMARC::decode for explanation of what's going on
     ## here
     if ( ref($self) =~ /^MARC::File/ ) {
-	$location = 'in record '.$self->{recnum};
-	$text = shift;
+        $location = 'in record '.$self->{recnum};
+        $text = shift;
     } else {
-	$location = 'in record 1';
-	$text = $self=~/MARC::File/ ? shift : $self;
+        $location = 'in record 1';
+        $text = $self=~/MARC::File/ ? shift : $self;
     }
 
     my $enc = shift || $_load_args{BinaryEncoding};
     my $format = shift || $_load_args{RecordFormat};
 
-    $parser->{ tagStack } = [];
-    $parser->{ subfields } = [];
-    $parser->{ Handler }{ record } = MARC::Record->new();
+    my $handler = MARC::File::SAX->new();
+    my $parser = $factory->parser(
+        Handler => $handler, 
+        ProtocolEncoding => $_load_args{DefaultEncoding}
+    );
     $parser->{ Handler }{ toMARC8 } = decideMARC8Binary($format,$enc);
 
     $parser->parse_string( $text );
 
-    return( $parser->{ Handler }{ record } );
-    
+    return( $handler->record() );
 }
 
 sub decideMARC8Binary {
-	my $format = shift;
-	my $enc = shift;
+    my $format = shift;
+    my $enc = shift;
 
-	return 0 if (defined($format) && lc($format) =~ /^unimarc/o);
-	return 0 if (defined($enc) && lc($enc) =~ /^utf-?8/o);
-	return 1;
+    return 0 if (defined($format) && lc($format) =~ /^unimarc/o);
+    return 0 if (defined($enc) && lc($enc) =~ /^utf-?8/o);
+    return 1;
 }
 
 
@@ -473,7 +469,7 @@ returned the XML as a scalar.
 sub encode {
     my $record = shift;
     my $format = shift || $_load_args{RecordFormat};
-    my $without_header = shift;
+    my $without_collection_header = shift;
     my $enc = shift || $_load_args{DefaultEncoding};
 
     if (lc($format) =~ /^unimarc/o) {
@@ -481,29 +477,33 @@ sub encode {
     }
 
     my @xml = ();
-    push( @xml, header( $enc ) ) unless ($without_header);
-    push( @xml, record( $record, $format, $without_header, $enc ) );
-    push( @xml, footer() ) unless ($without_header);
+    push( @xml, header( $enc ) ) unless ($without_collection_header);
+    # verbose, but naming the header output flags this way to avoid
+    # the potential confusion identified in CPAN bug #34082
+    # http://rt.cpan.org/Public/Bug/Display.html?id=34082
+    my $include_full_record_header = ($without_collection_header) ? 1 : 0;
+    push( @xml, record( $record, $format, $include_full_record_header, $enc ) );
+    push( @xml, footer() ) unless ($without_collection_header);
 
     return( join( "\n", @xml ) );
 }
 
 sub _unimarc_encoding {
-	my $f = shift;
-	my $r = shift;
+    my $f = shift;
+    my $r = shift;
 
-	my $pos = 26;
-	$pos = 13 if (lc($f) eq 'unimarcauth');
+    my $pos = 26;
+    $pos = 13 if (lc($f) eq 'unimarcauth');
 
-	my $enc = substr( $r->subfield(100 => 'a'), $pos, 2 );
+    my $enc = substr( $r->subfield(100 => 'a'), $pos, 2 );
 
-	if ($enc eq '01' || $enc eq '03') {
-		return 'ISO-8859-1';
-	} elsif ($enc eq '50') {
-		return 'UTF-8';
-	} else {
-		die "Unsupported UNIMARC character encoding [$enc] for XML output for $f; 100$a -> " . $r->subfield(100 => 'a');
-	}
+    if ($enc eq '01' || $enc eq '03') {
+        return 'ISO-8859-1';
+    } elsif ($enc eq '50') {
+        return 'UTF-8';
+    } else {
+        die "Unsupported UNIMARC character encoding [$enc] for XML output for $f; 100\$a -> " . $r->subfield(100 => 'a');
+    }
 }
 
 =head1 TODO
