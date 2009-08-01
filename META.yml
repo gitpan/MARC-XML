@@ -1,10 +1,10 @@
 --- #YAML:1.0
 name:               MARC-XML
-version:            0.91
+version:            0.92
 abstract:           ~
 author:
     - Ed Summers <ehs@pobox.com>
-license:            unknown
+license:            perl
 distribution_type:  module
 configure_requires:
     ExtUtils::MakeMaker:  0
