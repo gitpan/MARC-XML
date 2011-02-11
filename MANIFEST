@@ -8,11 +8,15 @@ Makefile.PL
 MANIFEST
 META.yml
 README
+t/batch-ns.t
+t/batch-ns.xml
 t/batch.t
 t/batch.xml
 t/encode.t
+t/error-handling.t
 t/escape.mrc
 t/escape.t
+t/invalid.xml
 t/namespace.t
 t/namespace.xml
 t/record.dat
