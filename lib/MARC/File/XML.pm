@@ -13,7 +13,7 @@ use IO::File;
 use Carp qw( croak );
 use Encode ();
 
-$VERSION = '1.0';
+$VERSION = '1.0.1';
 
 our $parser;
 
@@ -453,13 +453,16 @@ sub decode {
 
     my $rec = MARC::Record->new();
     my @leaders = $root->getElementsByLocalName('leader');
-    my $leader = $leaders[0]->textContent;
+    my $transcode_to_marc8 = 0;
+    if (@leaders) {
+        my $leader = $leaders[0]->textContent;
 
-    # this bit is rather questionable
-    my $transcode_to_marc8 = substr($leader, 9, 1) eq 'a' && decideMARC8Binary($format, $enc) ? 1 : 0;
-    substr($leader, 9, 1) = ' ' if $transcode_to_marc8;
+        # this bit is rather questionable
+        $transcode_to_marc8 = substr($leader, 9, 1) eq 'a' && decideMARC8Binary($format, $enc) ? 1 : 0;
+        substr($leader, 9, 1) = ' ' if $transcode_to_marc8;
     
-    $rec->leader($leader);
+        $rec->leader($leader);
+    }
 
     my @fields = ();
     foreach my $elt ($root->getChildrenByLocalName('*')) {
