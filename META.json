@@ -5,7 +5,7 @@
       "Galen Charlton <gmcharlt@gmail.com>"
    ],
    "dynamic_config" : 1,
-   "generated_by" : "ExtUtils::MakeMaker version 6.64, CPAN::Meta::Converter version 2.120921",
+   "generated_by" : "ExtUtils::MakeMaker version 6.82, CPAN::Meta::Converter version 2.120351",
    "license" : [
       "perl_5"
    ],
@@ -40,5 +40,5 @@
       }
    },
    "release_status" : "stable",
-   "version" : "v1.0.1"
+   "version" : "v1.0.2"
 }
