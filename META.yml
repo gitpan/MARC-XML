@@ -22,4 +22,4 @@ requires:
   MARC::Charset: 0.98
   MARC::Record: 2
   XML::LibXML: 1.66
-version: v1.0.2
+version: v1.0.3
